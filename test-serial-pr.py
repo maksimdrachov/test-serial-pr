@@ -1,73 +1,39 @@
-import typing
-from pycyphal.transport import (
-    InputSessionSpecifier,
-    OutputSessionSpecifier,
-    MessageDataSpecifier,
-    Priority,
-)
+from pycyphal.transport import MessageDataSpecifier
+from pycyphal.transport import Priority
 from pycyphal.transport.serial import SerialFrame
 
-prio = Priority.NOMINAL
-dst_nid = 1234  # TODO: Not specified in doc?
-
-# Transfer kind: message with the subject ID 1234
-session_spec = OutputSessionSpecifier(MessageDataSpecifier(1234), None)
-
-
-def mk_frame(
-    transfer_id: int,
-    index: int,
-    end_of_transfer: bool,
-    payload: typing.Union[bytes, memoryview],
-    source_node_id: typing.Optional[int],
-) -> SerialFrame:
-    return SerialFrame(
-        priority=prio,
-        transfer_id=transfer_id,
-        index=index,
-        end_of_transfer=end_of_transfer,
-        payload=memoryview(payload),
-        source_node_id=source_node_id,
-        destination_node_id=dst_nid,
-        data_specifier=session_spec.data_specifier,
-        user_data=0,
-    )
-
-
-## Fist example
-
-serial_frame = mk_frame(
-    transfer_id=0,  # Transfer ID 0
+f = SerialFrame(
+    priority=Priority.NOMINAL,
+    transfer_id=0,
     index=0,  # Transmit zero. Drop frame if received non-zero.
-    end_of_transfer=True,  # Transmit True. Drop frame if received False.
-    payload=b"012345678",  # Transfer payload containing string "012345678"
-    source_node_id=1234,  # Source node ID 1234
+    end_of_transfer=True,  # Transmit true. Drop frame if received false.
+    payload=memoryview(b"012345678"),
+    source_node_id=1234,
+    destination_node_id=None,
+    data_specifier=MessageDataSpecifier(1234),
+    user_data=0,
 )
 
-print("serial_frame: ", serial_frame)
+buffer = bytearray(0 for _ in range(1000))
+mv = f.compile_into(buffer)
 
-out_buffer: bytearray = bytearray(1024)
-memoryview_output = serial_frame.compile_into(out_buffer=out_buffer)
+print("mv: ", mv.tobytes())
+print("len(mv): ", len(mv.tobytes()))  # in spec it has 42 bytes, but here it is 36
 
-print("memoryview_output: ", memoryview_output.tobytes())
+# starting delimiter
+print("mv[0]: ", mv[0].to_bytes(1, byteorder="big"))
 
-memoryview_bytes = memoryview_output.tobytes()
+# COBS overhead byte
+print("mv[1]: ", mv[1].to_bytes(1, byteorder="big"))
 
-print(
-    "(starting delimiter) memoryview_bytes[0]: ", memoryview_bytes[0].to_bytes(1, "big")
-)
-print(
-    "(COBS overhead byte) memoryview_bytes[1]: ", memoryview_bytes[1].to_bytes(1, "big")
-)
-print("(header) memoryview_bytes[2:2+24]: ")
-for single_byte in memoryview_bytes[2 : 2 + 24]:
-    print(single_byte.to_bytes(1, "big"))
-print("(payload) memoryview_bytes[27:27+11]: ")
-for single_byte in memoryview_bytes[27 : 27 + 11]:
-    print(single_byte.to_bytes(1, "big"))
-print("COBS-encoded transfer-CRC", memoryview_bytes[39 : 39 + 4])
-for single_byte in memoryview_bytes[39 : 39 + 4]:
-    print(single_byte.to_bytes(1, "big"))
-print(
-    "(ending delimiter) memoryview_bytes[44]: ", memoryview_bytes[44].to_bytes(1, "big")
-)
+# 24 bytes of COBS encoded header
+print("mv[2:26]: ", mv[2:26].tobytes())
+
+# 11 bytes of COBS encoded payload (2 + 9)
+print("mv[26:37]: ", mv[26:37].tobytes())
+
+# 4 bytes COBS encoded transfer-CRC
+print("mv[37:41]: ", mv[37:41].tobytes())
+
+# 1 byte delimiter ending the frame
+print("mv[41]: ", mv[41].to_bytes(1, byteorder="big"))
