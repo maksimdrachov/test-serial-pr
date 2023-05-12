@@ -8,7 +8,7 @@ from pycyphal.transport import (
 from pycyphal.transport.serial import SerialFrame
 
 prio = Priority.NOMINAL
-dst_nid = 1  # TODO: Not specified in doc?
+dst_nid = 1234  # TODO: Not specified in doc?
 
 # Transfer kind: message with the subject ID 1234
 session_spec = OutputSessionSpecifier(MessageDataSpecifier(1234), None)
