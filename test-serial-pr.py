@@ -1,12 +1,17 @@
 import typing
-from pycyphal.transport import InputSessionSpecifier, MessageDataSpecifier, Priority
+from pycyphal.transport import (
+    InputSessionSpecifier,
+    OutputSessionSpecifier,
+    MessageDataSpecifier,
+    Priority,
+)
 from pycyphal.transport.serial import SerialFrame
 
 prio = Priority.NOMINAL
 dst_nid = 1  # TODO: Not specified in doc?
 
 # Transfer kind: message with the subject ID 1234
-session_spec = InputSessionSpecifier(MessageDataSpecifier(1234), None)
+session_spec = OutputSessionSpecifier(MessageDataSpecifier(1234), None)
 
 
 def mk_frame(
